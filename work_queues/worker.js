@@ -2,12 +2,12 @@ const amqp = require('amqplib/callback_api');
 
 /**
  * The callback that used for handle the creation of a channel
- * @param       errorChannel    the error of channel creation
+ * @param       error           the error of channel creation
  * @param       channel         the channel that succesfully created
  */
-const channelCallback = (errorChannel, channel) => {
-    if (errorChannel) {
-        throw errorChannel;
+const channelCallback = (error, channel) => {
+    if (error) {
+        throw error;
     }
 
     let queue = 'task_queue';
@@ -41,12 +41,12 @@ const channelCallback = (errorChannel, channel) => {
 
 /**
  * The callback that used for handle the creation of a connection
- * @param       errorConnection the error of connection creation
+ * @param       error           the error of connection creation
  * @param       connection      the connection that succesfully created
  */
-const connectionCallback = (errorConnection, connection) => {
-    if (errorConnection) {
-        throw errorConnection;
+const connectionCallback = (error, connection) => {
+    if (error) {
+        throw error;
     }
 
     connection.createChannel(channelCallback);

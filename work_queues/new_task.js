@@ -1,28 +1,28 @@
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
 
 /**
- * Get the message for given command line argument
- * @param       argv    the command line argument values
- * @return              the message
+ * Get the message for given command line argument. The message is joined from
+ * third argument until the rest with spaces. If there is no third argument,
+ * return 'Hi, there!' as the message.
+ *
+ * @param {String[]} argv - the command line argument values
+ * @return {String} the concated message
  */
 const getMessage = argv => {
     return argv.slice(2).join(' ') || 'Hi, there!';
 }
 
 /**
- * The callback that used for handle the creation of a channel
- * @param       error           the error of channel creation
- * @param       channel         the channel that succesfully created
+ * This is an immediately invoked function expression to be used as async
+ * function because of we need to use 'await' keyword
  */
-const channelCallback = (error, channel) => {
-    if (error) {
-        throw error;
-    }
-
-    let queue = 'task_queue';
+(async () => {
+    let connection = await amqp.connect('amqp://localhost');
+    let channel = await connection.createChannel();
+    let queue = 'work_queue';
     let message = getMessage(process.argv);
 
-    channel.assertQueue(queue, {
+    await channel.assertQueue(queue, {
         // Set durable to true so if the RabbitMQ stops, the queue still remain
         durable: true
     });
@@ -32,25 +32,10 @@ const channelCallback = (error, channel) => {
         // remain
         persistent: true
     });
-    console.log(' [x] Sent %s', message);
-}
+    console.log(` [x] Sent ${message}`);
 
-/**
- * The callback that used for handle the creation of a connection
- * @param       error           the error of connection creation
- * @param       connection      the connection that succesfully created
- */
-const connectionCallback = (error, connection) => {
-    if (error) {
-        throw error;
-    }
-
-    connection.createChannel(channelCallback);
-
-    setTimeout(() => {
-        connection.close();
+    setTimeout(async () => {
+        await connection.close();
         process.exit(0);
     }, 500);
-}
-
-amqp.connect('amqp://localhost', connectionCallback);
+})();

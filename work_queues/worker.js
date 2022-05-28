@@ -1,18 +1,35 @@
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
 
 /**
- * The callback that used for handle the creation of a channel
- * @param       error           the error of channel creation
- * @param       channel         the channel that succesfully created
+ * Process the supplied message. It just used to display the message to the
+ * console.
+ *
+ * @param {Object} channel - The channel that consume the message
+ * @param {Object} message - The supplied message
  */
-const channelCallback = (error, channel) => {
-    if (error) {
-        throw error;
-    }
+const processMessage = (channel, message) => {
+    let seconds = message.content.toString().split('.').length - 1;
 
-    let queue = 'task_queue';
+    console.log(` [x] Received ${message.content.toString()}`);
 
-    channel.assertQueue(queue, {
+    // Simulate processing the task
+    setTimeout(() => {
+        console.log(' [x] Done');
+        // Send acknowledgement signal as the end of the task processing
+        channel.ack(message);
+    }, seconds * 1000);
+}
+
+/**
+ * This is an immediately invoked function expression to be used as async
+ * function because of we need to use 'await' keyword
+ */
+(async () => {
+    let connection = await amqp.connect('amqp://localhost');
+    let channel = await connection.createChannel();
+    let queue = 'work_queue';
+
+    await channel.assertQueue(queue, {
         durable: true
     });
 
@@ -21,35 +38,11 @@ const channelCallback = (error, channel) => {
     // is sent)
     channel.prefetch(1);
 
-    console.log(' [*] Waiting for messages in %s. To exit press CTRL+C',
-        queue);
-    channel.consume(queue, message => {
-        let seconds = message.content.toString().split('.').length - 1;
-
-        console.log(' [x] Received %s', message.content.toString());
-
-        // Simulate processing the task
-        setTimeout(() => {
-            console.log(' [x] Done');
-            // Send acknowledgement signal as the end of the task processing
-            channel.ack(message);
-        }, seconds * 1000);
+    console.log(` [*] Waiting for messages in ${queue}. To exit press CTRL+C`);
+    await channel.consume(queue, message => {
+        processMessage(channel, message);
     }, {
+        // Tell the RabbitMQ that we will send acknowledgement signal
         noAck: false
     });
-}
-
-/**
- * The callback that used for handle the creation of a connection
- * @param       error           the error of connection creation
- * @param       connection      the connection that succesfully created
- */
-const connectionCallback = (error, connection) => {
-    if (error) {
-        throw error;
-    }
-
-    connection.createChannel(channelCallback);
-}
-
-amqp.connect('amqp://localhost', connectionCallback);
+})();

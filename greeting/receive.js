@@ -1,41 +1,30 @@
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
 
 /**
- * The callback that used for handle the creation of a channel
- * @param       error           the error of channel creation
- * @param       channel         the channel that succesfully created
+ * Process the supplied message. It just used to display the message to the
+ * console.
+ *
+ * @param {Object} message - The supplied message
  */
-const channelCallback = (error, channel) => {
-    if (error) {
-        throw error;
-    }
+const processMessage = message => {
+    console.log(` [x] Received ${message.content.toString()}`);
+}
 
+/**
+ * This is an immediately invoked function expression to be used as async
+ * function because of we need to use 'await' keyword
+ */
+(async () => {
+    let connection = await amqp.connect('amqp://localhost');
+    let channel = await connection.createChannel();
     let queue = 'greeting';
 
-    channel.assertQueue(queue, {
+    await channel.assertQueue(queue, {
         durable: false
     });
 
-    console.log(' [*] Waiting for messages in %s. To exit press CTRL+C',
-        queue);
-    channel.consume(queue, message => {
-        console.log(' [x] Received %s', message.content.toString());
-    }, {
+    console.log(` [*] Waiting for messages in ${queue}. To exit press CTRL+C`);
+    await channel.consume(queue, processMessage, {
         noAck: true
     });
-}
-
-/**
- * The callback that used for handle the creation of a connection
- * @param       error           the error of connection creation
- * @param       connection      the connection that succesfully created
- */
-const connectionCallback = (error, connection) => {
-    if (error) {
-        throw error;
-    }
-
-    connection.createChannel(channelCallback);
-}
-
-amqp.connect('amqp://localhost', connectionCallback);
+})();

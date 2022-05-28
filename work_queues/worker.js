@@ -1,8 +1,8 @@
 const amqp = require('amqplib');
 
 /**
- * Process the supplied message. It just used to display the message to the
- * console.
+ * Process the supplied message. It used to simulate task processing and display
+ * the message to the console.
  *
  * @param {Object} channel - The channel that consume the message
  * @param {Object} message - The supplied message
